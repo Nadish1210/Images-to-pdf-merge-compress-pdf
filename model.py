@@ -5,13 +5,14 @@ from PIL import Image
 import fitz  # PyMuPDF for compression
 from PyPDF2 import PdfMerger
 
-# ReportLab imports for better PDF creation with orientation support
+# ReportLab imports for better PDF creation with orientation
+
+# ReportLab imports
 from reportlab.lib.pagesizes import A4, letter, legal
 from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
-# Page sizes dictionary
 PAGE_SIZES = {
     "A4": A4,
     "Letter": letter,
@@ -19,7 +20,6 @@ PAGE_SIZES = {
     "Original": None
 }
 
-# ====================== Images to PDF (Fixed Landscape + Fit) ======================
 def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", quality="High", enable_compression=True):
     if not uploaded_files:
         return None, "Koi image upload nahi ki gayi!"
@@ -34,55 +34,58 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
         c = canvas.Canvas(pdf_path)
 
         for uploaded_file in uploaded_files:
-            # Open image
             pil_img = Image.open(uploaded_file).convert("RGB")
             img_width, img_height = pil_img.size
             img_reader = ImageReader(uploaded_file)
 
             if page_size == "Original":
-                # Use original image size
-                page_w, page_h = img_width, img_height
-                draw_w, draw_h = img_width, img_height
-                x, y = 0, 0
+                page_w = img_width
+                page_h = img_height
+                draw_w = img_width
+                draw_h = img_height
+                x = 0
+                y = 0
             else:
                 base_size = PAGE_SIZES[page_size]
                 
-                # Apply orientation
-                if orientation == "Landscape":
+                # === Landscape Fix ===
+                if orientation.lower() == "landscape":
                     page_size_tuple = landscape(base_size)
                 else:
                     page_size_tuple = portrait(base_size)
 
                 page_w, page_h = page_size_tuple
 
-                # Scale image to fit page while keeping aspect ratio
-                scale = min(page_w / img_width, page_h / img_height) * 0.98
+                # Scale image to fit page properly
+                scale = min(page_w / img_width, page_h / img_height) * 0.97   # 3% margin
                 draw_w = img_width * scale
                 draw_h = img_height * scale
 
-                # Center the image on page
+                # Center image
                 x = (page_w - draw_w) / 2
                 y = (page_h - draw_h) / 2
 
-            # Set page size and draw image
+            # Set page size for this page
             c.setPageSize((page_w, page_h))
-            c.drawImage(img_reader, x, y, width=draw_w, height=draw_h, 
-                       preserveAspectRatio=True, anchor='c')
+            
+            # Draw image
+            c.drawImage(img_reader, x, y, width=draw_w, height=draw_h,
+                        preserveAspectRatio=True, anchor='c')
 
-            c.showPage()  # Move to next page
+            c.showPage()   # Important: next page
 
         c.save()
 
-        # Read PDF bytes for download
+        # Read bytes
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
 
         os.unlink(pdf_path)
 
-        return pdf_bytes, f"✅ {len(uploaded_files)} images successfully converted to PDF!"
+        return pdf_bytes, f"✅ {len(uploaded_files)} images converted! (Landscape Fixed)"
 
     except Exception as e:
-        return None, f"Conversion error: {str(e)}"
+        return None, f"Error: {str(e)}"
 
 
 # ====================== Merge PDFs ======================
