@@ -140,31 +140,40 @@ def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small
 
 
 # ====================== Feedback Functions ======================
-feedbacks = []   # In-memory storage (Streamlit Cloud ke liye simple)
+feedbacks = []
 
 def save_feedback(name, feedback_text, rating):
     if not feedback_text or not feedback_text.strip():
-        return "Feedback likhna zaroori hai!"
+        return "❌ Feedback likhna zaroori hai!"
     
     feedbacks.append({
-        "name": name.strip() if name else "Anonymous",
+        "name": name.strip() if name and name.strip() else "Anonymous",
         "feedback": feedback_text.strip(),
         "rating": rating
     })
-    return "✅ Thank you! Feedback save ho gaya."
+    return "✅ Thank you! Feedback successfully save ho gaya."
 
 
 def show_feedback():
     if not feedbacks:
-        return "Abhi tak koi feedback nahi mila."
+        return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
+
+    html = """
+    <h4 style="color:#00cc00;">All Feedbacks from Users</h4>
+    <hr style="border-color:#00cc00;">
+    """
     
-    html = "<h4>All Feedbacks</h4>"
-    for fb in feedbacks:
+    for fb in reversed(feedbacks):  # Latest feedback pehle
         html += f"""
-        <div style="border-left: 4px solid #00cc00; padding: 10px; margin: 10px 0;">
-            <strong>Rating:</strong> {fb['rating']}<br>
+        <div style="border-left: 5px solid #00cc00; 
+                    padding: 15px; 
+                    margin: 15px 0; 
+                    background-color: #f8f9fa; 
+                    border-radius: 8px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">{fb['rating']}</div>
             <strong>Name:</strong> {fb['name']}<br>
             <strong>Feedback:</strong> {fb['feedback']}
         </div>
         """
+    
     return html
