@@ -1,7 +1,7 @@
 streamlit
 Pillow
 PyMuPDF
-pypdf2
-reportlab
+PyPDF2
 numpy
 opencv-python-headless
+tabulate
