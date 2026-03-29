@@ -1,40 +1,158 @@
-import streamlit as st
-from model import (
-    images_to_pdf,
-    merge_pdfs,
-    compress_pdf,
-    save_feedback,
-    show_feedback
-)
+import os
+import tempfile
+from PIL import Image
+import fitz  # PyMuPDF for compression
+from PyPDF2 import PdfMerger
 
-# Page Configuration
-st.set_page_config(
-    page_title="Its Nadish - Image to PDF",
-    page_icon="🖼️",
-    layout="wide"
-)
+# Compression levels
+compression_map = {
+    "Balanced (Good Quality + Small Size)": 0.7,
+    "High Compression": 0.5,
+    "Maximum Compression": 0.3,
+    "Best Quality": 0.95
+}
 
-# Custom CSS
-st.markdown("""
-<style>
-    .main-title {
-        color: #00cc00;
-        font-size: 42px;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .sub-title {
-        text-align: center;
-        color: #666;
-        margin-bottom: 30px;
-    }
-    .stButton>button {
-        width: 100%;
-    }
-    .download-btn {
-        background-color: #00cc00 !important;
-        color: white !important;
+# ====================== Images to PDF ======================
+def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", quality="High", enable_compression=True):
+    if not uploaded_files:
+        return None, "Koi image upload nahi ki gayi!"
+
+    try:
+        pil_images = []
+        for uploaded_file in uploaded_files:
+            image = Image.open(uploaded_file).convert("RGB")
+            pil_images.append(image)
+
+        quality_map = {"Low": 60, "Medium": 75, "High": 85, "Maximum": 95}
+        save_quality = quality_map.get(quality, 85)
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            pdf_path = tmp.name
+
+        pil_images[0].save(
+            pdf_path,
+            save_all=True,
+            append_images=pil_images[1:],
+            quality=save_quality,
+            optimize=enable_compression
+        )
+
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        os.unlink(pdf_path)
+
+        return pdf_bytes, f"✅ {len(uploaded_files)} images successfully PDF mein convert ho gayi!"
+
+    except Exception as e:
+        return None, f"Conversion error: {str(e)}"
+
+
+# ====================== Merge PDFs ======================
+def merge_pdfs(uploaded_pdfs):
+    if len(uploaded_pdfs) < 2:
+        return None, "Merge karne ke liye kam se kam 2 PDFs upload karein!"
+
+    try:
+        merger = PdfMerger()
+        temp_paths = []
+
+        for pdf_file in uploaded_pdfs:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(pdf_file.getvalue())
+                temp_paths.append(tmp.name)
+                merger.append(tmp.name)
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            output_path = tmp.name
+
+        merger.write(output_path)
+        merger.close()
+
+        with open(output_path, "rb") as f:
+            merged_bytes = f.read()
+
+        os.unlink(output_path)
+        for path in temp_paths:
+            if os.path.exists(path):
+                os.unlink(path)
+
+        return merged_bytes, f"✅ {len(uploaded_pdfs)} PDFs successfully merge ho gaye!"
+
+    except Exception as e:
+        return None, f"Merge error: {str(e)}"
+
+
+# ====================== Compress PDF ======================
+def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small Size)"):
+    if not uploaded_pdf:
+        return None, "PDF upload karein!", ""
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(uploaded_pdf.getvalue())
+            input_path = tmp.name
+
+        doc = fitz.open(input_path)
+        output_path = input_path.replace(".pdf", "_compressed.pdf")
+
+        for page in doc:
+            page.clean_contents()
+
+        doc.save(output_path, garbage=4, deflate=True, clean=True)
+        doc.close()
+
+        with open(output_path, "rb") as f:
+            compressed_bytes = f.read()
+
+        os.unlink(input_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+        return compressed_bytes, "✅ PDF successfully compressed!", ""
+
+    except Exception as e:
+        return None, f"Compression error: {str(e)}", ""
+
+
+# ====================== Feedback System ======================
+feedbacks = []
+
+def save_feedback(name, feedback_text, rating):
+    if not feedback_text or not feedback_text.strip():
+        return "❌ Feedback likhna zaroori hai!"
+    
+    feedbacks.append({
+        "name": name.strip() if name and name.strip() else "Anonymous",
+        "feedback": feedback_text.strip(),
+        "rating": rating
+    })
+    return "✅ Thank you! Feedback successfully save ho gaya."
+
+
+def show_feedback():
+    if not feedbacks:
+        return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
+
+    html = """
+    <h4 style="color:#00cc00;">All Feedbacks from Users</h4>
+    <hr style="border-color:#00cc00;">
+    """
+    
+    for fb in reversed(feedbacks):  # Latest feedback pehle
+        html += f"""
+        <div style="border-left: 5px solid #00cc00; 
+                    padding: 15px; 
+                    margin: 15px 0; 
+                    background-color: #f8f9fa; 
+                    border-radius: 8px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">{fb['rating']}</div>
+            <strong>Name:</strong> {fb['name']}<br>
+            <strong>Feedback:</strong> {fb['feedback']}
+        </div>
+        """
+    
+    return html        color: white !important;
         font-weight: bold;
     }
 </style>
