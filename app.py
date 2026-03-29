@@ -7,14 +7,13 @@ from model import (
     show_feedback
 )
 
-# ==================== Page Configuration ====================
 st.set_page_config(
     page_title="Its Nadish - Image to PDF",
     page_icon="🖼️",
     layout="wide"
 )
 
-# ==================== Custom CSS ====================
+# Custom CSS
 st.markdown("""
 <style>
     .main-title {
@@ -35,128 +34,76 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ==================== Header ====================
 st.markdown('<div class="main-title">Its Nadish</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Powerful Image to PDF | Merge | Compress Tool</div>', unsafe_allow_html=True)
 
-# Tabs
 tab1, tab2, tab3 = st.tabs(["🖼️ Images to PDF", "📑 Merge PDFs", "📉 Compress PDF"])
 
-# ====================== Tab 1: Images to PDF ======================
+# ====================== Images to PDF ======================
 with tab1:
     col1, col2 = st.columns([1, 1])
-    
     with col1:
-        img_files = st.file_uploader(
-            "Upload Images (JPG, PNG, WEBP, etc.)",
-            type=["jpg", "jpeg", "png", "webp", "bmp", "tiff"],
-            accept_multiple_files=True
-        )
-    
+        img_files = st.file_uploader("Upload Images", type=["jpg","jpeg","png","webp","bmp","tiff"], accept_multiple_files=True)
     with col2:
-        p_size = st.selectbox("Page Size", ["A4", "Letter", "Legal", "Original"], index=0)
+        p_size = st.selectbox("Page Size", ["A4", "Letter", "Legal", "Original"])
         p_orient = st.radio("Orientation", ["Portrait", "Landscape"], horizontal=True)
         p_qual = st.selectbox("Quality", ["Low", "Medium", "High", "Maximum"], index=2)
         p_comp = st.checkbox("Enable Compression", value=True)
-    
+
     if st.button("Convert to PDF", type="primary", use_container_width=True):
-        if not img_files:
-            st.error("Please upload at least one image!")
-        else:
-            with st.spinner("Converting images to PDF..."):
-                download_bytes, message = images_to_pdf(img_files, p_size, p_orient, p_qual, p_comp)
-                if download_bytes:
-                    st.success(message)
-                    st.download_button(
-                        label="📥 Download PDF",
-                        data=download_bytes,
-                        file_name="images_to_pdf_by_Nadish.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        type="primary"
-                    )
+        if img_files:
+            with st.spinner("Converting..."):
+                bytes_data, msg = images_to_pdf(img_files, p_size, p_orient, p_qual, p_comp)
+                if bytes_data:
+                    st.success(msg)
+                    st.download_button("📥 Download PDF", bytes_data, "images_to_pdf_by_Nadish.pdf", "application/pdf")
                 else:
-                    st.error(message)
+                    st.error(msg)
 
-# ====================== Tab 2: Merge PDFs ======================
+# ====================== Merge PDFs ======================
 with tab2:
-    merge_files = st.file_uploader(
-        "Upload PDF Files",
-        type=["pdf"],
-        accept_multiple_files=True
-    )
-    
+    merge_files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True)
     if st.button("Merge Files", type="primary", use_container_width=True):
-        if len(merge_files) < 2:
-            st.warning("Please upload at least 2 PDF files!")
-        else:
-            with st.spinner("Merging PDFs..."):
-                download_bytes, message = merge_pdfs(merge_files)
-                if download_bytes:
-                    st.success(message)
-                    st.download_button(
-                        label="📥 Download Merged PDF",
-                        data=download_bytes,
-                        file_name="merged_by_Nadish.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        type="primary"
-                    )
+        if len(merge_files) >= 2:
+            with st.spinner("Merging..."):
+                bytes_data, msg = merge_pdfs(merge_files)
+                if bytes_data:
+                    st.success(msg)
+                    st.download_button("📥 Download Merged PDF", bytes_data, "merged_by_Nadish.pdf", "application/pdf")
                 else:
-                    st.error(message)
+                    st.error(msg)
 
-# ====================== Tab 3: Compress PDF ======================
+# ====================== Compress PDF ======================
 with tab3:
-    comp_file = st.file_uploader("Upload PDF File", type=["pdf"])
-    
-    comp_lvl = st.selectbox(
-        "Compression Level",
-        ["Balanced (Good Quality + Small Size)", 
-         "High Compression", 
-         "Maximum Compression", 
-         "Best Quality"]
-    )
+    comp_file = st.file_uploader("Upload PDF", type=["pdf"])
+    comp_lvl = st.selectbox("Compression Level", ["Balanced (Good Quality + Small Size)", "High Compression", "Maximum Compression", "Best Quality"])
     
     if st.button("Compress Now", type="primary", use_container_width=True):
-        if not comp_file:
-            st.error("Please upload a PDF file!")
-        else:
-            with st.spinner("Compressing PDF..."):
-                download_bytes, message, _ = compress_pdf(comp_file, comp_lvl)
-                if download_bytes:
-                    st.success(message)
-                    st.download_button(
-                        label="📥 Download Compressed PDF",
-                        data=download_bytes,
-                        file_name="compressed_by_Nadish.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        type="primary"
-                    )
+        if comp_file:
+            with st.spinner("Compressing..."):
+                bytes_data, msg, _ = compress_pdf(comp_file, comp_lvl)
+                if bytes_data:
+                    st.success(msg)
+                    st.download_button("📥 Download Compressed PDF", bytes_data, "compressed_by_Nadish.pdf", "application/pdf")
                 else:
-                    st.error(message)
+                    st.error(msg)
 
-# ====================== Feedback Section ======================
-with st.expander("⭐ Give Feedback to Nadish", expanded=False):
-    f_name = st.text_input("Name or Email (Optional)")
-    f_txt = st.text_area("Your Feedback", height=100)
-    f_rate = st.radio("Rating", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], horizontal=True)
-    
-    if st.button("Submit Feedback", type="primary"):
-        if f_txt.strip():
-            msg = save_feedback(f_name, f_txt, f_rate)
-            st.success(msg)
+# Feedback
+with st.expander("⭐ Give Feedback to Nadish"):
+    name = st.text_input("Name or Email (Optional)")
+    feedback = st.text_area("Your Feedback")
+    rating = st.radio("Rating", ["⭐","⭐⭐","⭐⭐⭐","⭐⭐⭐⭐","⭐⭐⭐⭐⭐"], horizontal=True)
+    if st.button("Submit Feedback"):
+        if feedback.strip():
+            st.success(save_feedback(name, feedback, rating))
         else:
-            st.warning("Please write some feedback!")
+            st.warning("Feedback likho!")
 
-with st.expander("📋 View All Feedback", expanded=False):
-    if st.button("Show All Feedback", type="primary"):
-        html = show_feedback()
-        st.markdown(html, unsafe_allow_html=True)
+with st.expander("📋 View All Feedback"):
+    if st.button("Show Feedback"):
+        st.markdown(show_feedback(), unsafe_allow_html=True)
 
-# Reset Button
-if st.button("🔄 Reset Everything", type="secondary"):
+if st.button("Reset Everything"):
     st.rerun()
 
-# Footer
 st.caption("Made with ❤️ by Nadish")
