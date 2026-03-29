@@ -1,8 +1,7 @@
 streamlit
 Pillow
-pypdf2          # ya PyPDF2
-reportlab       # agar images_to_pdf reportlab use karta hai
-pymupdf         # ya fitz (PyMuPDF) compression ke liye
-python-dotenv   # agar .env use kar rahe ho
-
-
+PyMuPDF
+pypdf2
+reportlab
+numpy
+opencv-python-headless
