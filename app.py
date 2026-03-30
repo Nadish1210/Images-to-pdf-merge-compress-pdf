@@ -89,36 +89,87 @@ with tab3:
                     st.error(msg)
 # ====================== FEEDBACK SECTION ======================
 
-with st.expander("⭐ Give Feedback to Nadish", expanded=False):
-    col1, col2 = st.columns([3, 2])
+import os
+import json
+from datetime import datetime
+import streamlit as st
+
+# ====================== FEEDBACK SYSTEM ======================
+FEEDBACK_FILE = "feedbacks.json"
+
+def load_feedbacks():
+    if os.path.exists(FEEDBACK_FILE):
+        try:
+            with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_feedbacks(feedbacks):
+    try:
+        with open(FEEDBACK_FILE, "w", encoding="utf-8") as f:
+            json.dump(feedbacks, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        st.error(f"Save error: {str(e)}")
+        return False
+
+
+def save_feedback(name: str, feedback_text: str, rating: str):
+    """Feedback save karne ka sahi function"""
     
-    with col1:
-        name = st.text_input("Name or Email (Optional)", placeholder="Apna naam ya email likho")
-    with col2:
-        rating = st.radio("Rating", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], 
-                         horizontal=True, label_visibility="visible")
+    if not feedback_text or not feedback_text.strip():
+        return "❌ Feedback likhna zaroori hai!"
+
+    if not rating:
+        return "❌ Rating select karna zaroori hai!"
+
+    # Purane feedbacks load karo
+    feedbacks = load_feedbacks()
+
+    # Naya feedback add karo
+    new_feedback = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "name": name.strip() if name and name.strip() else "Anonymous",
+        "feedback": feedback_text.strip(),
+        "rating": rating
+    }
+
+    feedbacks.append(new_feedback)        # ← Yeh line important hai (append)
+
+    # Save karo
+    if save_feedbacks(feedbacks):
+        return "✅ Thank you! Feedback saved successfully. ⭐"
+    else:
+        return "❌ Feedback save nahi ho saka. Baad mein try karein."
+
+
+def show_feedback():
+    """Sab feedbacks dikhane ka function"""
+    feedbacks = load_feedbacks()
     
-    feedback = st.text_area("Your Feedback", placeholder="Yahan apna feedback likho...", height=100)
+    if not feedbacks:
+        return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
+
+    html = """
+    <h4 style='color:#00cc00; text-align:center;'>📋 All User Feedbacks</h4>
+    <hr style='border-color:#00cc00;'>
+    """
+
+    for fb in reversed(feedbacks):   # Latest feedback sabse upar
+        html += f"""
+        <div style="border-left:6px solid #00cc00; 
+                    padding:18px; 
+                    margin:15px 0; 
+                    background:#f8f9fa; 
+                    border-radius:10px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div style="font-size:32px; margin-bottom:10px;">{fb['rating']}</div>
+            <strong>Name:</strong> {fb['name']}<br>
+            <strong>Time:</strong> {fb['timestamp']}<br>
+            <strong>Feedback:</strong> {fb['feedback']}
+        </div>
+        """
     
-    if st.button("Submit Feedback", type="primary", use_container_width=True):
-        if feedback.strip():
-            message = save_feedback(name, feedback, rating)
-            if "✅" in message:
-                st.success(message)
-            else:
-                st.error(message)
-        else:
-            st.warning("❌ Feedback likhna zaroori hai!")
-
-# ====================== VIEW ALL FEEDBACK ======================
-
-with st.expander("📋 View All Feedback", expanded=False):
-    if st.button("Show All Feedbacks", type="secondary", use_container_width=True):
-        st.markdown(show_feedback(), unsafe_allow_html=True)
-
-# ====================== RESET BUTTON ======================
-
-if st.button("🔄 Reset Everything", type="secondary"):
-    st.rerun()
-
-st.caption("Made with ❤️ by Nadish")
+    return html
