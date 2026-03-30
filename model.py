@@ -19,7 +19,7 @@ PAGE_SIZES = {
     "Original": None
 }
 
-# ====================== Images to PDF (Fixed Landscape + Fit) ======================
+# ====================== Images to PDF (Fixed Landscape) ======================
 def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", quality="High", enable_compression=True):
     if not uploaded_files:
         return None, "Koi image upload nahi ki gayi!"
@@ -34,20 +34,21 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
         c = canvas.Canvas(pdf_path)
 
         for uploaded_file in uploaded_files:
-            # Open image
             pil_img = Image.open(uploaded_file).convert("RGB")
             img_width, img_height = pil_img.size
             img_reader = ImageReader(uploaded_file)
 
             if page_size == "Original":
-                # Use original image size
-                page_w, page_h = img_width, img_height
-                draw_w, draw_h = img_width, img_height
-                x, y = 0, 0
+                page_w = img_width
+                page_h = img_height
+                draw_w = img_width
+                draw_h = img_height
+                x = 0
+                y = 0
             else:
                 base_size = PAGE_SIZES[page_size]
                 
-                # Apply orientation
+                # Apply orientation correctly
                 if orientation == "Landscape":
                     page_size_tuple = landscape(base_size)
                 else:
@@ -55,25 +56,23 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
 
                 page_w, page_h = page_size_tuple
 
-                # Scale image to fit page while keeping aspect ratio
-                scale = min(page_w / img_width, page_h / img_height) * 0.98
+                # Scale image to fit page (maintain aspect ratio)
+                scale = min(page_w / img_width, page_h / img_height) * 0.97
                 draw_w = img_width * scale
                 draw_h = img_height * scale
 
-                # Center the image on page
+                # Center the image
                 x = (page_w - draw_w) / 2
                 y = (page_h - draw_h) / 2
 
-            # Set page size and draw image
             c.setPageSize((page_w, page_h))
             c.drawImage(img_reader, x, y, width=draw_w, height=draw_h, 
                        preserveAspectRatio=True, anchor='c')
 
-            c.showPage()  # Move to next page
+            c.showPage()
 
         c.save()
 
-        # Read PDF bytes for download
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
 
@@ -109,7 +108,6 @@ def merge_pdfs(uploaded_pdfs):
         with open(output_path, "rb") as f:
             merged_bytes = f.read()
 
-        # Cleanup
         os.unlink(output_path)
         for p in temp_paths:
             if os.path.exists(p):
@@ -143,7 +141,6 @@ def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small
         with open(output_path, "rb") as f:
             compressed_bytes = f.read()
 
-        # Cleanup
         os.unlink(input_path)
         if os.path.exists(output_path):
             os.unlink(output_path)
@@ -154,14 +151,15 @@ def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small
         return None, f"Compression error: {str(e)}", ""
 
 
-# ====================== Feedback System ======================
+# ====================== Feedback System (Safe Version) ======================
 FEEDBACK_FILE = "feedbacks.json"
 
 def load_feedbacks():
     if os.path.exists(FEEDBACK_FILE):
         try:
             with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                return data if isinstance(data, list) else []
         except:
             return []
     return []
@@ -194,13 +192,21 @@ def show_feedback():
         return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
 
     html = "<h4 style='color:#00cc00;'>All Feedbacks</h4><hr>"
+    
     for fb in reversed(feedbacks):
+        if not isinstance(fb, dict):
+            continue
+        # Safe access to avoid KeyError
+        rating = fb.get('rating', '⭐⭐⭐')
+        name = fb.get('name', 'Anonymous')
+        feedback_text = fb.get('feedback', '(No text provided)')
+        
         html += f"""
         <div style="border-left:5px solid #00cc00; padding:15px; margin:12px 0; 
                     background:#f8f9fa; border-radius:8px;">
-            <div style="font-size:24px;">{fb['rating']}</div>
-            <strong>Name:</strong> {fb['name']}<br>
-            <strong>Feedback:</strong> {fb['feedback']}
+            <div style="font-size:24px;">{rating}</div>
+            <strong>Name:</strong> {name}<br>
+            <strong>Feedback:</strong> {feedback_text}
         </div>
         """
     return html
