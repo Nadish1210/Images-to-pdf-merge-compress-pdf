@@ -5,14 +5,13 @@ from PIL import Image
 import fitz  # PyMuPDF for compression
 from PyPDF2 import PdfMerger
 
-# ReportLab imports for better PDF creation with orientation
-
-# ReportLab imports
+# ReportLab imports for better PDF creation with orientation support
 from reportlab.lib.pagesizes import A4, letter, legal
 from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
+# Page sizes dictionary
 PAGE_SIZES = {
     "A4": A4,
     "Letter": letter,
@@ -20,6 +19,7 @@ PAGE_SIZES = {
     "Original": None
 }
 
+# ====================== Images to PDF (Fixed Landscape + Fit) ======================
 def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", quality="High", enable_compression=True):
     if not uploaded_files:
         return None, "Koi image upload nahi ki gayi!"
@@ -34,58 +34,55 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
         c = canvas.Canvas(pdf_path)
 
         for uploaded_file in uploaded_files:
+            # Open image
             pil_img = Image.open(uploaded_file).convert("RGB")
             img_width, img_height = pil_img.size
             img_reader = ImageReader(uploaded_file)
 
             if page_size == "Original":
-                page_w = img_width
-                page_h = img_height
-                draw_w = img_width
-                draw_h = img_height
-                x = 0
-                y = 0
+                # Use original image size
+                page_w, page_h = img_width, img_height
+                draw_w, draw_h = img_width, img_height
+                x, y = 0, 0
             else:
                 base_size = PAGE_SIZES[page_size]
                 
-                # === Landscape Fix ===
-                if orientation.lower() == "landscape":
+                # Apply orientation
+                if orientation == "Landscape":
                     page_size_tuple = landscape(base_size)
                 else:
                     page_size_tuple = portrait(base_size)
 
                 page_w, page_h = page_size_tuple
 
-                # Scale image to fit page properly
-                scale = min(page_w / img_width, page_h / img_height) * 0.97   # 3% margin
+                # Scale image to fit page while keeping aspect ratio
+                scale = min(page_w / img_width, page_h / img_height) * 0.98
                 draw_w = img_width * scale
                 draw_h = img_height * scale
 
-                # Center image
+                # Center the image on page
                 x = (page_w - draw_w) / 2
                 y = (page_h - draw_h) / 2
 
-            # Set page size for this page
+            # Set page size and draw image
             c.setPageSize((page_w, page_h))
-            
-            # Draw image
-            c.drawImage(img_reader, x, y, width=draw_w, height=draw_h,
-                        preserveAspectRatio=True, anchor='c')
+            c.drawImage(img_reader, x, y, width=draw_w, height=draw_h, 
+                       preserveAspectRatio=True, anchor='c')
 
-            c.showPage()   # Important: next page
+            c.showPage()  # Move to next page
 
         c.save()
 
-        # Read bytes
+        # Read PDF bytes for download
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
 
         os.unlink(pdf_path)
 
-        return pdf_bytes, f"✅ {len(uploaded_files)} images converted! (Landscape Fixed)"
+        return pdf_bytes, f"✅ {len(uploaded_files)} images successfully converted to PDF!"
 
     except Exception as e:
-        return None, f"Error: {str(e)}"
+        return None, f"Conversion error: {str(e)}"
 
 
 # ====================== Merge PDFs ======================
@@ -157,14 +154,10 @@ def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small
         return None, f"Compression error: {str(e)}", ""
 
 
-
-
-
 # ====================== Feedback System ======================
 FEEDBACK_FILE = "feedbacks.json"
 
 def load_feedbacks():
-    """Feedbacks ko load karo"""
     if os.path.exists(FEEDBACK_FILE):
         try:
             with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
@@ -174,64 +167,40 @@ def load_feedbacks():
     return []
 
 def save_feedbacks(feedbacks):
-    """Feedbacks ko save karo"""
     try:
         with open(FEEDBACK_FILE, "w", encoding="utf-8") as f:
             json.dump(feedbacks, f, ensure_ascii=False, indent=2)
         return True
-    except Exception as e:
-        st.error(f"Feedback save karne mein problem hui: {e}")
+    except:
         return False
 
-
-def save_feedback(name: str, feedback_text: str, rating: str):
-    """User ka feedback save karne ka function"""
-    
+def save_feedback(name, feedback_text, rating):
     if not feedback_text or not feedback_text.strip():
         return "❌ Feedback likhna zaroori hai!"
 
-    if not rating:
-        return "❌ Rating select karna zaroori hai!"
-
     feedbacks = load_feedbacks()
-
-    new_feedback = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    feedbacks.append({
         "name": name.strip() if name and name.strip() else "Anonymous",
         "feedback": feedback_text.strip(),
         "rating": rating
-    }
-
-    feedbacks.append(new_feedback)
-    
-    if save_feedbacks(feedbacks):
-        return "✅ Thank you! Feedback saved successfully. ⭐"
-    else:
-        return "❌ Feedback save nahi ho saka. Baad mein try karein."
+    })
+    save_feedbacks(feedbacks)
+    return "✅ Thank you! Feedback saved successfully."
 
 
 def show_feedback():
-    """Sab feedbacks ko beautiful tarike se show karo"""
     feedbacks = load_feedbacks()
-    
     if not feedbacks:
         return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
 
-    html = "<h4 style='color:#00cc00; text-align:center;'>📋 All User Feedbacks</h4><hr style='border-color:#00cc00;'>"
-
-    for fb in reversed(feedbacks):   # Latest feedback sabse upar
+    html = "<h4 style='color:#00cc00;'>All Feedbacks</h4><hr>"
+    for fb in reversed(feedbacks):
         html += f"""
-        <div style="border-left: 6px solid #00cc00; 
-                    padding: 15px; 
-                    margin: 12px 0; 
-                    background: #f8f9fa; 
-                    border-radius: 10px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div style="font-size: 28px; margin-bottom: 8px;">{fb['rating']}</div>
+        <div style="border-left:5px solid #00cc00; padding:15px; margin:12px 0; 
+                    background:#f8f9fa; border-radius:8px;">
+            <div style="font-size:24px;">{fb['rating']}</div>
             <strong>Name:</strong> {fb['name']}<br>
-            <strong>Time:</strong> {fb['timestamp']}<br>
             <strong>Feedback:</strong> {fb['feedback']}
         </div>
         """
-    
     return html
