@@ -87,23 +87,38 @@ with tab3:
                     st.download_button("📥 Download Compressed PDF", bytes_data, "compressed_by_Nadish.pdf", "application/pdf")
                 else:
                     st.error(msg)
+# ====================== FEEDBACK SECTION ======================
 
-# Feedback
-with st.expander("⭐ Give Feedback to Nadish"):
-    name = st.text_input("Name or Email (Optional)")
-    feedback = st.text_area("Your Feedback")
-    rating = st.radio("Rating", ["⭐","⭐⭐","⭐⭐⭐","⭐⭐⭐⭐","⭐⭐⭐⭐⭐"], horizontal=True)
-    if st.button("Submit Feedback"):
+with st.expander("⭐ Give Feedback to Nadish", expanded=False):
+    col1, col2 = st.columns([3, 2])
+    
+    with col1:
+        name = st.text_input("Name or Email (Optional)", placeholder="Apna naam ya email likho")
+    with col2:
+        rating = st.radio("Rating", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], 
+                         horizontal=True, label_visibility="visible")
+    
+    feedback = st.text_area("Your Feedback", placeholder="Yahan apna feedback likho...", height=100)
+    
+    if st.button("Submit Feedback", type="primary", use_container_width=True):
         if feedback.strip():
-            st.success(save_feedback(name, feedback, rating))
+            message = save_feedback(name, feedback, rating)
+            if "✅" in message:
+                st.success(message)
+            else:
+                st.error(message)
         else:
-            st.warning("Feedback likho!")
+            st.warning("❌ Feedback likhna zaroori hai!")
 
-with st.expander("📋 View All Feedback"):
-    if st.button("Show Feedback"):
+# ====================== VIEW ALL FEEDBACK ======================
+
+with st.expander("📋 View All Feedback", expanded=False):
+    if st.button("Show All Feedbacks", type="secondary", use_container_width=True):
         st.markdown(show_feedback(), unsafe_allow_html=True)
 
-if st.button("Reset Everything"):
+# ====================== RESET BUTTON ======================
+
+if st.button("🔄 Reset Everything", type="secondary"):
     st.rerun()
 
 st.caption("Made with ❤️ by Nadish")
