@@ -157,10 +157,14 @@ def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small
         return None, f"Compression error: {str(e)}", ""
 
 
+
+
+
 # ====================== Feedback System ======================
 FEEDBACK_FILE = "feedbacks.json"
 
 def load_feedbacks():
+    """Feedbacks ko load karo"""
     if os.path.exists(FEEDBACK_FILE):
         try:
             with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
@@ -170,40 +174,64 @@ def load_feedbacks():
     return []
 
 def save_feedbacks(feedbacks):
+    """Feedbacks ko save karo"""
     try:
         with open(FEEDBACK_FILE, "w", encoding="utf-8") as f:
             json.dump(feedbacks, f, ensure_ascii=False, indent=2)
         return True
-    except:
+    except Exception as e:
+        st.error(f"Feedback save karne mein problem hui: {e}")
         return False
 
-def save_feedback(name, feedback_text, rating):
+
+def save_feedback(name: str, feedback_text: str, rating: str):
+    """User ka feedback save karne ka function"""
+    
     if not feedback_text or not feedback_text.strip():
         return "❌ Feedback likhna zaroori hai!"
 
+    if not rating:
+        return "❌ Rating select karna zaroori hai!"
+
     feedbacks = load_feedbacks()
-    feedbacks.append({
+
+    new_feedback = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "name": name.strip() if name and name.strip() else "Anonymous",
         "feedback": feedback_text.strip(),
         "rating": rating
-    })
-    save_feedbacks(feedbacks)
-    return "✅ Thank you! Feedback saved successfully."
+    }
+
+    feedbacks.append(new_feedback)
+    
+    if save_feedbacks(feedbacks):
+        return "✅ Thank you! Feedback saved successfully. ⭐"
+    else:
+        return "❌ Feedback save nahi ho saka. Baad mein try karein."
 
 
 def show_feedback():
+    """Sab feedbacks ko beautiful tarike se show karo"""
     feedbacks = load_feedbacks()
+    
     if not feedbacks:
         return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
 
-    html = "<h4 style='color:#00cc00;'>All Feedbacks</h4><hr>"
-    for fb in reversed(feedbacks):
+    html = "<h4 style='color:#00cc00; text-align:center;'>📋 All User Feedbacks</h4><hr style='border-color:#00cc00;'>"
+
+    for fb in reversed(feedbacks):   # Latest feedback sabse upar
         html += f"""
-        <div style="border-left:5px solid #00cc00; padding:15px; margin:12px 0; 
-                    background:#f8f9fa; border-radius:8px;">
-            <div style="font-size:24px;">{fb['rating']}</div>
+        <div style="border-left: 6px solid #00cc00; 
+                    padding: 15px; 
+                    margin: 12px 0; 
+                    background: #f8f9fa; 
+                    border-radius: 10px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="font-size: 28px; margin-bottom: 8px;">{fb['rating']}</div>
             <strong>Name:</strong> {fb['name']}<br>
+            <strong>Time:</strong> {fb['timestamp']}<br>
             <strong>Feedback:</strong> {fb['feedback']}
         </div>
         """
+    
     return html
