@@ -1,7 +1,21 @@
 import streamlit as st
-from model import images_to_pdf, merge_pdfs, compress_pdf, save_feedback, show_feedback
+from model import (
+    images_to_pdf, 
+    merge_pdfs, 
+    compress_pdf, 
+    save_feedback, 
+    show_feedback
+)
 
-st.set_page_config(page_title="Its Nadish - Image to PDF", page_icon="🖼️", layout="wide")
+# Initialize session state for reset
+if "reset_key" not in st.session_state:
+    st.session_state.reset_key = 0
+
+st.set_page_config(
+    page_title="Its Nadish - Image to PDF",
+    page_icon="🖼️",
+    layout="wide"
+)
 
 st.markdown("""
 <style>
@@ -20,7 +34,12 @@ tab1, tab2, tab3 = st.tabs(["🖼️ Images to PDF", "📑 Merge PDFs", "📉 Co
 with tab1:
     col1, col2 = st.columns([1, 1])
     with col1:
-        img_files = st.file_uploader("Upload Images", type=["jpg","jpeg","png","webp","bmp","tiff"], accept_multiple_files=True)
+        img_files = st.file_uploader(
+            "Upload Images", 
+            type=["jpg","jpeg","png","webp","bmp","tiff"], 
+            accept_multiple_files=True,
+            key=f"img_uploader_{st.session_state.reset_key}"
+        )
     with col2:
         p_size = st.selectbox("Page Size", ["A4", "Letter", "Legal", "Original"])
         p_orient = st.radio("Orientation", ["Portrait", "Landscape"], horizontal=True)
@@ -41,7 +60,12 @@ with tab1:
 
 # Tab 2: Merge PDFs
 with tab2:
-    merge_files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True)
+    merge_files = st.file_uploader(
+        "Upload PDF Files", 
+        type=["pdf"], 
+        accept_multiple_files=True,
+        key=f"merge_uploader_{st.session_state.reset_key}"
+    )
     if st.button("Merge Files", type="primary", use_container_width=True):
         if len(merge_files) < 2:
             st.warning("At least 2 PDFs upload karein!")
@@ -56,7 +80,11 @@ with tab2:
 
 # Tab 3: Compress PDF
 with tab3:
-    comp_file = st.file_uploader("Upload PDF", type=["pdf"])
+    comp_file = st.file_uploader(
+        "Upload PDF", 
+        type=["pdf"],
+        key=f"comp_uploader_{st.session_state.reset_key}"
+    )
     comp_lvl = st.selectbox("Compression Level", 
         ["Balanced (Good Quality + Small Size)", "High Compression", "Maximum Compression", "Best Quality"])
     
@@ -87,7 +115,9 @@ with st.expander("📋 View All Feedback", expanded=False):
     if st.button("Show All Feedback", type="primary"):
         st.markdown(show_feedback(), unsafe_allow_html=True)
 
-if st.button("🔄 Reset Everything"):
+# ==================== Reset Button ====================
+if st.button("🔄 Reset Everything", type="secondary"):
+    st.session_state.reset_key += 1
     st.rerun()
 
 st.caption("Made with ❤️ by Nadish")
