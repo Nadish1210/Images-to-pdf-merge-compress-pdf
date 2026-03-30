@@ -2,16 +2,17 @@ import os
 import tempfile
 import json
 from PIL import Image
-import fitz  # PyMuPDF for compression
+import fitz
 from PyPDF2 import PdfMerger
 
-# ReportLab imports for better PDF creation with orientation support
+# ReportLab
 from reportlab.lib.pagesizes import A4, letter, legal
 from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfdoc
 
-# Page sizes dictionary
+# Page sizes
 PAGE_SIZES = {
     "A4": A4,
     "Letter": letter,
@@ -19,7 +20,7 @@ PAGE_SIZES = {
     "Original": None
 }
 
-# ====================== Images to PDF (Fixed Landscape) ======================
+# ====================== Images to PDF (Fixed - No Delete on Click) ======================
 def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", quality="High", enable_compression=True):
     if not uploaded_files:
         return None, "Koi image upload nahi ki gayi!"
@@ -32,6 +33,11 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
             pdf_path = tmp.name
 
         c = canvas.Canvas(pdf_path)
+
+        # Disable annotations & protect from accidental delete
+        c.setAuthor("Its Nadish")
+        c.setTitle("Converted by Its Nadish")
+        c.setSubject("Image to PDF Tool")
 
         for uploaded_file in uploaded_files:
             pil_img = Image.open(uploaded_file).convert("RGB")
@@ -48,7 +54,6 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
             else:
                 base_size = PAGE_SIZES[page_size]
                 
-                # Apply orientation correctly
                 if orientation == "Landscape":
                     page_size_tuple = landscape(base_size)
                 else:
@@ -56,12 +61,10 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
 
                 page_w, page_h = page_size_tuple
 
-                # Scale image to fit page (maintain aspect ratio)
                 scale = min(page_w / img_width, page_h / img_height) * 0.97
                 draw_w = img_width * scale
                 draw_h = img_height * scale
 
-                # Center the image
                 x = (page_w - draw_w) / 2
                 y = (page_h - draw_h) / 2
 
@@ -73,6 +76,7 @@ def images_to_pdf(uploaded_files, page_size="A4", orientation="Portrait", qualit
 
         c.save()
 
+        # Read bytes
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
 
@@ -151,7 +155,7 @@ def compress_pdf(uploaded_pdf, compression_level="Balanced (Good Quality + Small
         return None, f"Compression error: {str(e)}", ""
 
 
-# ====================== Feedback System (Safe Version) ======================
+# ====================== Feedback System ======================
 FEEDBACK_FILE = "feedbacks.json"
 
 def load_feedbacks():
@@ -192,11 +196,9 @@ def show_feedback():
         return "Abhi tak koi feedback nahi mila. Pehla feedback do! ⭐"
 
     html = "<h4 style='color:#00cc00;'>All Feedbacks</h4><hr>"
-    
     for fb in reversed(feedbacks):
         if not isinstance(fb, dict):
             continue
-        # Safe access to avoid KeyError
         rating = fb.get('rating', '⭐⭐⭐')
         name = fb.get('name', 'Anonymous')
         feedback_text = fb.get('feedback', '(No text provided)')
